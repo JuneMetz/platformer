@@ -9,6 +9,7 @@ pub struct App {
 
 impl App {
     pub fn new(event_loop: &winit::event_loop::EventLoop<crate::graphics::Graphics>) -> Self {
+        log::info!("attempting creation of proxy to some effect");
         Self {
             state: State::Init(Some(event_loop.create_proxy())),
         }
@@ -17,12 +18,16 @@ impl App {
     fn draw(&mut self) {
         if let State::Ready(gfx) = &mut self.state {
             gfx.draw();
+        } else {
+            log::warn!("failed draw call as we are still initializing");
         }
     }
 
     fn resized(&mut self, size: winit::dpi::PhysicalSize<u32>) {
         if let State::Ready(gfx) = &mut self.state {
             gfx.resize(size);
+        } else {
+            log::warn!("failed resize call as we are still initializing");
         }
     }
 }
@@ -49,14 +54,19 @@ impl winit::application::ApplicationHandler<crate::graphics::Graphics> for App {
 
                 win_attr = win_attr.with_title("WebGPU example");
 
+                log::info!("creating window creation process, panics on create_window error");
                 let window = std::sync::Arc::new(
                     event_loop
                         .create_window(win_attr)
                         .expect("create window err."),
                 );
-
+                log::info!("creating graphics object, sending it to proxy to create window");
                 pollster::block_on(crate::graphics::create_graphics(window, proxy));
+            } else {
+                log::warn!("failed to expand EventLoop proxy to concrete type without error");
             }
+        } else {
+            log::warn!("failed to move EventLoop proxy from inner to outer scope");
         }
     }
 

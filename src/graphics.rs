@@ -18,6 +18,7 @@ impl Graphics {
     }
 
     pub fn draw(&mut self) {
+        log::info!("attempting to get SurfaceTexture, can panic");
         let frame = self
             .surface
             .get_current_texture()
@@ -25,6 +26,7 @@ impl Graphics {
 
         let view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
+        log::info!("creating draw command list to submit to queue");
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
@@ -45,20 +47,22 @@ impl Graphics {
                 occlusion_query_set: None,
             });
             r_pass.set_pipeline(&self.render_pipeline);
+            log::info!("actual draw call, note that this draw call assumes that at this point the v&i buffers are set up");
             r_pass.draw(0..3, 0..1);
         } // `r_pass` dropped here
-
+        log::info!("draw commands submitted to queue");
         self.queue.submit(Some(encoder.finish()));
         frame.present();
     }
 }
 
 fn create_pipeline(device: &wgpu::Device, swap_chain_format: wgpu::TextureFormat) -> wgpu::RenderPipeline {
+    log::info!("loading shader shader.wgsl");
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: None,
         source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(include_str!("shader.wgsl"))),
     });
-
+    log::info!("creating render pipeline, vertex position determined by vertex_index");
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: None,
         layout: None,
@@ -85,6 +89,7 @@ fn create_pipeline(device: &wgpu::Device, swap_chain_format: wgpu::TextureFormat
 pub async fn create_graphics(window: std::sync::Arc<winit::window::Window>, proxy: winit::event_loop::EventLoopProxy<Graphics>) {
     let instance = wgpu::Instance::default();
     let surface = instance.create_surface(std::sync::Arc::clone(&window)).unwrap();
+    log::info!("requesting adapter (GPU), note that the request is async and can panic");
     let adapter = instance
         .request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::default(), // Power preference for the device
@@ -93,7 +98,7 @@ pub async fn create_graphics(window: std::sync::Arc<winit::window::Window>, prox
         })
         .await
         .expect("Could not get an adapter (GPU).");
-
+    log::info!("requesting device (GPU), note that the request is async and can panic. Will panic depending on required features");
     let (device, queue) = adapter
         .request_device(
             &wgpu::DeviceDescriptor {
@@ -115,7 +120,6 @@ pub async fn create_graphics(window: std::sync::Arc<winit::window::Window>, prox
     let height = size.height.max(1);
     let surface_config = surface.get_default_config(&adapter, width, height).unwrap();
 
-    #[cfg(not(target_arch = "wasm32"))]
     surface.configure(&device, &surface_config);
 
     let render_pipeline = create_pipeline(&device, surface_config.format);
@@ -130,6 +134,6 @@ pub async fn create_graphics(window: std::sync::Arc<winit::window::Window>, prox
         queue,
         render_pipeline,
     };
-
+    log::info!("emiting graphics event");
     let _ = proxy.send_event(gfx);
 }

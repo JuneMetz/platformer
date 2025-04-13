@@ -1,15 +1,24 @@
-#![windows_subsystem = "windows"]
-
 mod app;
 mod graphics;
 
 fn run_app(event_loop: winit::event_loop::EventLoop<crate::graphics::Graphics>, mut app: crate::app::App) {
     // Allows the setting of the log level through RUST_LOG env var.
     // It also allows wgpu logs to be seen.
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("error")).init();
-
+    //env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("error")).init();
+    init_logger();
     // Runs the app on the current thread.
     let _ = event_loop.run_app(&mut app);
+}
+
+fn init_logger() {
+    let env = env_logger::Env::new()
+    .filter_or("RUST_LOG", "info")
+    .write_style_or("RUST_LOG_STYLE", "always");
+
+    env_logger::Builder::from_env(env)
+    .format_level(false)
+    .format_timestamp_nanos()
+    .init();
 }
 
 fn main() {
