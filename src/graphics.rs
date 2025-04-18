@@ -8,6 +8,7 @@ pub struct Graphics {
     device: wgpu::Device,
     queue: wgpu::Queue,
     render_pipeline: wgpu::RenderPipeline,
+    vertex_buffer: wgpu::Buffer,
 }
 
 impl Graphics {
@@ -124,15 +125,25 @@ pub async fn create_graphics(window: std::sync::Arc<winit::window::Window>, prox
 
     let render_pipeline = create_pipeline(&device, surface_config.format);
 
+    let vertex_buffer = device.create_buffer(
+        &wgpu::BufferDescriptor {
+            label: None,
+            size: 0,
+            usage: wgpu::BufferUsages::VERTEX,
+            mapped_at_creation: false,
+        }
+    );
+
     let gfx = Graphics {
         window: window.clone(),
-        instance,
-        surface,
-        surface_config,
-        adapter,
-        device,
-        queue,
-        render_pipeline,
+        instance: instance,
+        surface: surface,
+        surface_config: surface_config,
+        adapter: adapter,
+        device: device,
+        queue: queue,
+        render_pipeline: render_pipeline,
+        vertex_buffer: vertex_buffer,
     };
     log::info!("emiting graphics event");
     let _ = proxy.send_event(gfx);
